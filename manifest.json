@@ -1,0 +1,26 @@
+{
+  "name": "حساب کار - WorkLedger",
+  "short_name": "حساب",
+  "description": "دفتر حساب کارگر روزمزد - با تقویم شمسی و میلادی، فارسی و ترکی",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0a0e1a",
+  "dir": "rtl",
+  "lang": "fa",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

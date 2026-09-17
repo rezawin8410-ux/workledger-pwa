@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="حساب کار">
+<title>حساب کار · WorkLedger</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+<style>
+  :root{
+    --bg:#0a0e1a; --card:#121826; --card2:#0f1424; --line:#22304a;
+    --text:#e8eefb; --sub:#93a2c2; --dim:#5b6884;
+    --blue:#58a6ff; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
+    --accent:#7c9aff; --accent2:#586dff;
+  }
+  body.light{
+    --bg:#f5f7fb; --card:#ffffff; --card2:#eef2f9; --line:#d5dcec;
+    --text:#1a2136; --sub:#5a6480; --dim:#9aa4bd;
+    --blue:#1a56db; --ok:#1a7f37; --warn:#9a6700; --bad:#cf222e;
+    --accent:#2b55e0; --accent2:#4a5fe8;
+  }
+  *{box-sizing:border-box}
+  html{font-size:16px}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Vazirmatn", "Segoe UI", Roboto, "Noto Naskh Arabic", Tahoma, sans-serif;
+    min-height:100dvh; -webkit-tap-highlight-color:transparent;
+    transition:background .25s, color .25s;
+  }
+  .wrap{max-width:900px; margin:0 auto; padding:0 14px 90px}
+
+  header{
+    position:sticky; top:0; z-index:50;
+    background:color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .hbar{display:flex; align-items:center; gap:10px; padding:12px 16px; max-width:900px; margin:0 auto}
+  .hbar .title{font-weight:800; font-size:1.05rem; letter-spacing:.2px}
+  .hbar .dot{width:10px;height:10px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 4px color-mix(in srgb, var(--blue) 22%, transparent)}
+  .hbar .spacer{flex:1}
+  .btn{
+    appearance:none; border:1px solid var(--line); background:var(--card);
+    color:var(--text); padding:8px 12px; border-radius:10px; font-size:.9rem;
+    cursor:pointer; transition:transform .06s, background .15s; font-family:inherit;
+    display:inline-flex; align-items:center; gap:6px; line-height:1;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn.pri{background:var(--accent); border-color:var(--accent); color:#fff}
+  .btn.ghost{background:transparent}
+  .btn.tiny{padding:6px 9px; font-size:.8rem}
+
+  /* Hero card */
+  .hero{
+    margin:16px 0; padding:18px; border-radius:18px;
+    background:linear-gradient(150deg, color-mix(in srgb, var(--accent) 26%, var(--card)), var(--card2));
+    border:1px solid var(--line);
+  }
+  .hero .h1{font-size:1.6rem; font-weight:800; margin:0 0 4px}
+  .hero .sub{color:var(--sub); font-size:.85rem}
+  .kpi{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:14px}
+  .kpi .cell{
+    background:color-mix(in srgb, var(--bg) 60%, transparent);
+    border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+  }
+  .kpi .lbl{font-size:.72rem; color:var(--sub); margin-bottom:4px; letter-spacing:.2px}
+  .kpi .val{font-size:1.15rem; font-weight:800; font-variant-numeric:tabular-nums}
+  .kpi .val.ok{color:var(--ok)} .kpi .val.bad{color:var(--bad)} .kpi .val.warn{color:var(--warn)}
+
+  section{margin:18px 0}
+  section h2{font-size:1rem; margin:0 0 10px; font-weight:700; display:flex; align-items:center; gap:8px}
+  section h2 .count{background:var(--card); border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:.7rem; color:var(--sub)}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px}
+
+  /* Tabs */
+  .tabs{display:flex; gap:6px; margin-bottom:12px; overflow-x:auto; scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    border:1px solid var(--line); background:var(--card); color:var(--text);
+    padding:9px 14px; border-radius:999px; font-size:.85rem; cursor:pointer; white-space:nowrap;
+    font-family:inherit; font-weight:600; transition:background .15s, border .15s;
+  }
+  .tab.on{background:var(--accent); border-color:var(--accent); color:#fff}
+
+  /* Entry form */
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:14px}
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field.full{grid-column:1/-1}
+  .field label{font-size:.72rem; color:var(--sub); font-weight:600}
+  .inp{
+    background:var(--card2); border:1px solid var(--line); color:var(--text);
+    border-radius:10px; padding:10px 12px; font-family:inherit; font-size:.95rem;
+    width:100%; outline:none; transition:border .15s;
+  }
+  .inp:focus{border-color:var(--accent)}
+  .dateRow{display:flex; gap:6px; align-items:center; justify-content:center; background:color-mix(in srgb, var(--accent) 14%, var(--card2)); border:1px dashed var(--line); border-radius:10px; padding:8px; grid-column:1/-1}
+  .dateRow .fa{font-weight:700; font-size:.95rem}
+  .dateRow .sep{color:var(--dim)} .dateRow .tr{color:var(--sub); font-size:.85rem}
+
+  /* Entry list */
+  .entry{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:12px; margin-bottom:8px; display:flex; flex-direction:column; gap:8px;
+  }
+  .entry .top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px}
+  .entry .emp{font-weight:700; font-size:.98rem}
+  .entry .kind{color:var(--sub); font-size:.8rem}
+  .entry .dats{font-size:.8rem; color:var(--sub); font-variant-numeric:tabular-nums}
+  .entry .dats .tr{color:var(--dim); margin-inline-start:8px}
+  .entry .money{display:flex; gap:10px; flex-wrap:wrap; font-size:.85rem; font-variant-numeric:tabular-nums}
+  .entry .money b{font-weight:800}
+  .tag{display:inline-block; padding:2px 8px; border-radius:999px; font-size:.7rem; font-weight:700; border:1px solid var(--line)}
+  .tag.ok{color:var(--ok); border-color:color-mix(in srgb, var(--ok) 40%, transparent); background:color-mix(in srgb, var(--ok) 12%, transparent)}
+  .tag.warn{color:var(--warn); border-color:color-mix(in srgb, var(--warn) 40%, transparent); background:color-mix(in srgb, var(--warn) 12%, transparent)}
+  .tag.bad{color:var(--bad); border-color:color-mix(in srgb, var(--bad) 40%, transparent); background:color-mix(in srgb, var(--bad) 12%, transparent)}
+  .tag.muted{color:var(--sub)}
+  .act{display:flex; gap:6px}
+  .icobtn{
+    width:34px; height:34px; border-radius:9px; border:1px solid var(--line);
+    background:var(--card2); color:var(--text); cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; font-size:1rem;
+  }
+  .icobtn:active{transform:scale(.95)}
+  .icobtn.del{color:var(--bad)}
+
+  /* Summary table */
+  table{width:100%; border-collapse:collapse; font-size:.88rem}
+  th, td{padding:9px 10px; text-align:start; border-bottom:1px solid var(--line)}
+  th{color:var(--sub); font-weight:600; font-size:.75rem; background:var(--card2)}
+  td{font-variant-numeric:tabular-nums}
+  td.num, th.num{text-align:end}
+  tr:last-child td{border-bottom:none}
+  .trow.big td{font-weight:800; font-size:1rem; color:var(--text); background:color-mix(in srgb, var(--accent) 12%, transparent)}
+  .paybar{height:6px; background:var(--card2); border-radius:999px; overflow:hidden; margin-top:6px}
+  .paybar > i{display:block; height:100%; background:var(--ok); border-radius:999px}
+
+  /* Filter bar */
+  .filterRow{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px}
+  .filterRow .inp{width:auto; flex:1; min-width:140px; font-size:.85rem}
+
+  /* Alerts */
+  .alert{
+    border-radius:12px; padding:12px; font-size:.85rem; margin:8px 0;
+    border:1px solid var(--line); background:var(--card);
+    display:flex; gap:10px; align-items:center;
+  }
+  .alert.warn{border-color:color-mix(in srgb, var(--warn) 40%, transparent); background:color-mix(in srgb, var(--warn) 12%, var(--card))}
+  .alert.bad{border-color:color-mix(in srgb, var(--bad) 40%, transparent); background:color-mix(in srgb, var(--bad) 12%, var(--card))}
+  .alert .ic{font-size:1.2rem}
+
+  /* Print / backup styles */
+  .hidden{display:none !important}
+  @media print {
+    body{background:#fff; color:#000}
+    header, .tabs, .filterRow, .act, .alert, .no-print, .btn{display:none !important}
+    .hero{background:#fff; border:none; padding:0}
+    .kpi .cell, .entry, .card{background:#fff; border-color:#ccc; color:#000}
+    .kpi .val, .entry .emp, td{color:#000}
+    .hide-print{display:none !important}
+    @page{margin:12mm}
+  }
+  /* big font toggle */
+  body.bigfont{font-size:18px}
+  body.bigfont .hbar .title{font-size:1.2rem}
+  body.bigfont .hero .h1{font-size:1.9rem}
+  body.bigfont .kpi .val{font-size:1.35rem}
+  body.bigfont .entry .emp{font-size:1.1rem}
+  body.bigfont td, body.bigfont th{font-size:1.05rem}
+  body.bigfont .inp{font-size:1.1rem}
+
+  /* Modal */
+  .modal{position:fixed; inset:0; background:color-mix(in srgb, var(--bg) 60%, transparent); backdrop-filter:blur(4px); z-index:100; display:flex; align-items:flex-end; justify-content:center}
+  .modal .sheet{
+    background:var(--card); width:100%; max-width:900px; border-radius:20px 20px 0 0;
+    border:1px solid var(--line); padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+    max-height:88dvh; overflow:auto;
+  }
+  .modal .sheet .x{margin-top:12px}
+
+  .toast{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--card); border:1px solid var(--line); color:var(--text); padding:10px 16px; border-radius:12px; font-size:.85rem; z-index:200; box-shadow:0 8px 30px rgba(0,0,0,.4); opacity:0; transition:opacity .2s; pointer-events:none}
+  .toast.on{opacity:1}
+  .toast.ok{border-color:var(--ok)} .toast.err{border-color:var(--bad)}
+
+  .rowline{display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); font-size:.9rem}
+  .rowline:last-child{border-bottom:none}
+  .rowline .r{font-weight:700}
+  .rowline .v{font-variant-numeric:tabular-nums; font-weight:800}
+
+  .hint{color:var(--dim); font-size:.75rem; margin-top:6px}
+  .stat-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; padding:14px}
+  .stat{background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:10px}
+  .stat .l{font-size:.7rem; color:var(--sub); margin-bottom:4px}
+  .stat .v{font-size:1.1rem; font-weight:800; font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<header>
+  <div class="hbar">
+    <div class="dot"></div>
+    <div class="title" data-i18n="app">حساب کار</div>
+    <div class="spacer"></div>
+    <button class="btn tiny ghost" id="btnBigFont" title="فونت بزرگ">A+</button>
+    <button class="btn tiny ghost" id="btnTheme" title="حالت روز/شب">☀️</button>
+    <button class="btn tiny ghost" id="btnLang">TR</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="h1" id="heroTitle">کارگر</div>
+    <div class="sub" id="heroSub"></div>
+    <div class="kpi" id="kpi"></div>
+  </div>
+
+  <!-- TODAY quick -->
+  <section>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="log" data-i18n="tab.log">روزنامه</button>
+      <button class="tab" data-tab="totals" data-i18n="tab.totals">جمع کل</button>
+      <button class="tab" data-tab="employers" data-i18n="tab.employers">کارفرماها</button>
+      <button class="tab" data-tab="backup" data-i18n="tab.backup">پشتیبان‌گیری</button>
+      <button class="tab" data-tab="settings" data-i18n="tab.settings">تنظیمات</button>
+    </div>
+
+    <!-- LOG -->
+    <div class="tabpanel" data-tab="log">
+      <div class="filterRow">
+        <input class="inp" id="q" data-i18n-ph="ph.search" placeholder="جستجوی کارفرما / نوع کار">
+        <select class="inp" id="empFilter">
+          <option value="" data-i18n="all.employers">همه کارفرماها</option>
+        </select>
+        <select class="inp" id="statusFilter">
+          <option value="" data-i18n="all.status">همه وضعیت‌ها</option>
+          <option value="paid" data-i18n="st.paid">پرداخت‌شده</option>
+          <option value="partial" data-i18n="st.partial">نیمه‌پرداخت</option>
+          <option value="debt" data-i18n="st.debt">معوق</option>
+        </select>
+        <select class="inp" id="calSelect">
+          <option value="0" data-i18n="cal.both">تقویم: هر دو</option>
+          <option value="1" data-i18n="cal.fa">تقویم: شمسی</option>
+          <option value="2" data-i18n="cal.tr">تقویم: میلادی</option>
+        </select>
+      </div>
+
+      <div class="alert" id="todayAlert"></div>
+
+      <div class="card" style="padding:12px; margin-bottom:12px" id="formCard">
+        <div style="font-weight:700; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center">
+          <span data-i18n="form.title">ثبت روز کار</span>
+          <button class="btn tiny" id="btnRepeatYesterday" data-i18n="form.repeat">🔁 تکرار دیروز</button>
+        </div>
+        <div class="grid">
+          <div class="dateRow">
+            <div class="fa" id="formDateFa"></div>
+            <div class="sep">·</div>
+            <div class="tr" id="formDateTr"></div>
+          </div>
+          <div class="field full">
+            <label data-i18n="f.employer">نام کارفرما / پروژه</label>
+            <input class="inp" id="fEmployer" list="empList" autocomplete="off">
+            <datalist id="empList"></datalist>
+          </div>
+          <div class="field">
+            <label data-i18n="f.kind">نوع کار</label>
+            <input class="inp" id="fKind" data-i18n-ph="ph.kind" placeholder="سازه، باغبانی، آشپزی...">
+          </div>
+          <div class="field">
+            <label data-i18n="f.days">تعداد روز</label>
+            <input class="inp" id="fDays" type="number" min="0" step="0.5" value="1">
+          </div>
+          <div class="field">
+            <label data-i18n="f.start">ساعت شروع</label>
+            <input class="inp" id="fStart" type="time" value="08:00">
+          </div>
+          <div class="field">
+            <label data-i18n="f.end">ساعت پایان</label>
+            <input class="inp" id="fEnd" type="time" value="17:00">
+          </div>
+          <div class="field">
+            <label data-i18n="f.rate">مبلغ روزمزد</label>
+            <input class="inp" id="fRate" type="number" min="0" inputmode="decimal" data-i18n-ph="ph.amount" placeholder="۰">
+          </div>
+          <div class="field">
+            <label data-i18n="f.paid">پرداخت‌شده</label>
+            <input class="inp" id="fPaid" type="number" min="0" inputmode="decimal" placeholder="۰">
+          </div>
+          <div class="field full">
+            <label data-i18n="f.advance">اَوانس (پیش‌پرداخت)</label>
+            <input class="inp" id="fAdvance" type="number" min="0" inputmode="decimal" placeholder="۰">
+          </div>
+          <div class="field full">
+            <label data-i18n="f.notes">یادداشت / توضیح</label>
+            <input class="inp" id="fNotes" data-i18n-ph="ph.notes" placeholder="آدرس، شرایط، توافق‌نامه...">
+          </div>
+        </div>
+        <div class="act" style="margin-top:12px">
+          <button class="btn pri" id="btnSave" data-i18n="form.save">💾 ثبت روز</button>
+          <button class="btn" id="btnSavePrevDay" data-i18n="form.saveYesterday">ثبت روز قبل</button>
+          <button class="btn ghost" id="btnClear" data-i18n="form.clear">پاک کردن</button>
+        </div>
+        <div class="hint">💡 <button class="btn tiny" id="btnSample" style="display:inline">⚡ ۵ داده نمونه</button> برای تست سریع</div>
+      </div>
+
+      <h2 data-i18n="log.entries">ورودهای ثبت‌شده</h2>
+      <div id="entries"></div>
+    </div>
+
+    <!-- TOTALS -->
+    <div class="tabpanel hidden" data-tab="totals">
+      <h2 data-i18n="tot.all">جمع کل کلی</h2>
+      <div class="card" style="padding:14px; margin-bottom:14px">
+        <div class="stat-grid" style="padding:0">
+          <div class="stat"><div class="l" data-i18n="tot.days">روزهای کاری</div><div class="v" id="tDays"></div></div>
+          <div class="stat"><div class="l" data-i18n="tot.hours">ساعات کاری</div><div class="v" id="tHours"></div></div>
+          <div class="stat"><div class="l" data-i18n="tot.total">کل دستمزد</div><div class="v" id="tTotal"></div></div>
+          <div class="stat"><div class="l" data-i18n="tot.paid">پرداخت‌شده</div><div class="v ok" id="tPaid"></div></div>
+          <div class="stat"><div class="l" data-i18n="tot.advance">کل اَوانس</div><div class="v" id="tAdvance"></div></div>
+          <div class="stat"><div class="l" data-i18n="tot.debt">بدهی باقی‌مانده</div><div class="v bad" id="tDebt"></div></div>
+          <div class="stat"><div class="l" data-i18n="tot.balance">مانده خالص</div><div class="v" id="tBalance"></div></div>
+          <div class="stat"><div class="l" data-i18n="tot.avg">میانگین روزمزد</div><div class="v" id="tAvg"></div></div>
+        </div>
+        <div class="paybar"><i id="paybarFill"></i></div>
+        <div class="hint" id="paybarLbl"></div>
+      </div>
+
+      <h2 data-i18n="tot.byemployer">به تفکیک کارفرما</h2>
+      <div class="card" id="byEmp"></div>
+
+      <h2 data-i18n="tot.bymonth">به تفکیک ماه (شمسی)</h2>
+      <div class="card" id="bymonth"></div>
+    </div>
+
+    <!-- EMPLOYERS -->
+    <div class="tabpanel hidden" data-tab="employers">
+      <h2 data-i18n="emp.title">کارفرماها / پروژه‌ها</h2>
+      <div id="empListCards"></div>
+    </div>
+
+    <!-- BACKUP -->
+    <div class="tabpanel hidden" data-tab="backup">
+      <h2 data-i18n="bak.title">پشتیبان‌گیری و خروجی</h2>
+      <div class="card" style="padding:14px">
+        <div class="rowline"><div class="r" data-i18n="bak.pdf">🖨️ خروجی PDF</div><div class="v" data-i18n="bak.pdfHint">چاپ یا ذخیره PDF (مرورگر)</div></div>
+        <div class="rowline"><div class="r" data-i18n="bak.txt">📄 خروجی متن مرتب</div><div class="v">دانلود .txt</div></div>
+        <div class="rowline"><div class="r" data-i18n="bak.json">🗂️ پشتیبان کامل (JSON)</div><div class="v">دانلود / بازگردانی</div></div>
+        <div class="rowline"><div class="r" data-i18n="bak.img">📸 خروجی عکس</div><div class="v" data-i18n="bak.imgHint">اسکرین‌شات خودکار</div></div>
+        <div class="act" style="margin-top:12px">
+          <button class="btn" id="btnPDF">🖨️ PDF</button>
+          <button class="btn" id="btnTXT">📄 TXT</button>
+          <button class="btn" id="btnJSON">🗂️ JSON</button>
+          <button class="btn" id="btnIMG">📸 عکس</button>
+          <label class="btn" for="jsonImport" style="margin-inline-start:auto">⬆️ بازگردانی</label>
+          <input type="file" id="jsonImport" accept="application/json" class="hidden">
+        </div>
+        <div class="hint" data-i18n="bak.hint">هر سه خروجی، تاریخ شمسی و میلادی + جمع‌ها را به‌طور کامل و مرتب در بر می‌گیرند.</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="tabpanel hidden" data-tab="settings">
+      <h2 data-i18n="set.title">تنظیمات و پروفایل</h2>
+      <div class="card" style="padding:14px">
+        <div class="field" style="margin-bottom:10px">
+          <label data-i18n="set.name">نام شما</label>
+          <input class="inp" id="setName">
+        </div>
+        <div class="field" style="margin-bottom:10px">
+          <label data-i18n="set.currency">واحد پول پیش‌فرض</label>
+          <select class="inp" id="setCurrency">
+            <option value="T">تومان (Ir)</option>
+            <option value="₺">لیر (TR)</option>
+            <option value="$">دالر ($)</option>
+            <option value="£">پوند (£)</option>
+            <option value="€">یورو (€)</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:10px">
+          <label data-i18n="set.target">هدف ماهانه (مبلغ)</label>
+          <input class="inp" id="setTarget" type="number" min="0">
+        </div>
+        <div class="field" style="margin-bottom:10px">
+          <label data-i18n="set.rate">نرخ روزمزد پیش‌فرض</label>
+          <input class="inp" id="setDefaultRate" type="number" min="0">
+        </div>
+        <div class="field">
+          <label data-i18n="set.holidayRate">ضریب تعطیلات / پنجشنبه</label>
+          <select class="inp" id="setHolidayMult">
+            <option value="1">۱× (نرمال)</option>
+            <option value="1.5">۱.۵× (پنجاه‌شنبه)</option>
+            <option value="2">۲× (تعطیل)</option>
+            <option value="0">۰ (غیرفعال)</option>
+          </select>
+        </div>
+        <div class="hint" data-i18n="set.holidayHint">در ثبت روز، روزهای پنجشنبه به‌طور خودکار این ضریب را اعمال می‌کند.</div>
+      </div>
+
+      <h2 style="margin-top:18px" data-i18n="danger.title">منطقه خطر</h2>
+      <div class="card" style="padding:14px; border-color:color-mix(in srgb, var(--bad) 40%, var(--line))">
+        <div class="rowline"><div class="r" data-i18n="danger.reset">پاک کردن همه داده‌ها</div></div>
+        <div class="act"><button class="btn" id="btnReset" style="border-color:var(--bad); color:var(--bad)" data-i18n="danger.reset2">حذف همه</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   WorkLedger — PWA حساب کار / iş defteri
+   - 100% client-side, localStorage, no network.
+   - Two calendars: Jalali (Shamsi) + Gregorian (Türkish).
+   - Two languages: fa (RTL) + tr (LTR), live switching.
+   ============================================================ */
+
+// ---------- i18n ----------
+const L10N = {
+  fa: {
+    "app":"حساب کار",
+    "tab.log":"روزنامه","tab.totals":"جمع کل","tab.employers":"کارفرماها","tab.backup":"پشتیبان‌گیری","tab.settings":"تنظیمات",
+    "all.employers":"همه کارفرماها","all.status":"همه وضعیت‌ها",
+    "st.paid":"پرداخت‌شده","st.partial":"نیمه‌پرداخت","st.debt":"معوق","st.ok":"تسویه",
+    "cal.both":"تقویم: هر دو","cal.fa":"تقویم: شمسی","cal.tr":"تقویم: میلادی",
+    "ph.search":"جستجوی کارفرما / نوع کار / یادداشت",
+    "ph.kind":"سازه، باغبانی، آشپزی...","ph.amount":"۰","ph.notes":"آدرس، شرایط، توافق‌نامه...",
+    "form.title":"ثبت روز کار","form.repeat":"🔁 تکرار دیروز",
+    "f.employer":"نام کارفرما / پروژه","f.kind":"نوع کار","f.days":"تعداد روز",
+    "f.start":"ساعت شروع","f.end":"ساعت پایان",
+    "f.rate":"مبلغ روزمزد","f.paid":"پرداخت‌شده","f.advance":"اَوانس (پیش‌پرداخت)","f.notes":"یادداشت / توضیح",
+    "form.save":"💾 ثبت روز","form.saveYesterday":"ثبت روز قبل","form.clear":"پاک کردن",
+    "log.entries":"ورودهای ثبت‌شده","log.none":"هنوز چیزی ثبت نشده — امروز را شروع کن!",
+    "today.title":"ثبت امروز",
+    "alert.none":"همه چیز پرداخت شده است ✅",
+    "alert.warn":"⚠️ ",
+    "alert.days":"روز در معوق",
+    "tot.all":"جمع کل کلی","tot.days":"روزهای کاری","tot.hours":"ساعات کاری",
+    "tot.total":"کل دستمزد","tot.paid":"پرداخت‌شده","tot.advance":"کل اَوانس","tot.debt":"بدهی باقی‌مانده",
+    "tot.balance":"مانده خالص","tot.avg":"میانگین روزمزد",
+    "tot.byemployer":"به تفکیک کارفرما","tot.bymonth":"به تفکیک ماه (شمسی)",
+    "tot.col.emp":"کارفرما","tot.col.days":"روز","tot.col.hours":"ساعت","tot.col.total":"کل دستمزد","tot.col.paid":"پرداخت","tot.col.adv":"اَوانس","tot.col.debt":"بدهی",
+    "tot.m.col":"ماه","tot.m.days":"روز","tot.m.total":"دستمزد","tot.m.paid":"پرداخت","tot.m.debt":"بدهی",
+    "emp.title":"کارفرماها / پروژه‌ها","emp.days":"روز","emp.hours":"ساعت","emp.debt":"بدهی",
+    "bak.title":"پشتیبان‌گیری و خروجی","bak.pdf":"🖨️ خروجی PDF","bak.pdfHint":"چاپ یا ذخیره PDF (مرورگر)",
+    "bak.txt":"📄 خروجی متن مرتب","bak.json":"🗂️ پشتیبان کامل (JSON)","bak.img":"📸 خروجی عکس",
+    "bak.imgHint":"اسکرین‌شات خودکار","bak.hint":"هر سه خروجی، تاریخ شمسی و میلادی + جمع‌ها را به‌طور کامل و مرتب در بر می‌گیرند.",
+    "bak.imported":"بازیابی شد: ",
+    "set.title":"تنظیمات و پروفایل","set.name":"نام شما","set.currency":"واحد پول پیش‌فرض",
+    "set.target":"هدف ماهانه (مبلغ)","set.rate":"نرخ روزمزد پیش‌فرض","set.holidayRate":"ضریب تعطیلات / پنجشنبه",
+    "set.holidayHint":"در ثبت روز، روزهای پنجشنبه به‌طور خودکار این ضریب را اعمال می‌کند.",
+    "danger.title":"منطقه خطر","danger.reset":"پاک کردن همه داده‌ها","danger.reset2":"حذف همه",
+    "danger.confirm":"واقعاً همه داده‌ها حذف شود؟",
+    "toast.saved":"ثبت شد ✅","toast.deleted":"حذف شد","toast.rep":"تکرار دیروز انجام شد",
+    "toast.pdf":"در حال چاپ...","toast.txt":"دانلود TXT","toast.json":"دانلود JSON","toast.img":"در حال گرفتن عکس...","toast.imgdone":"عکس ذخیره شد ✅",
+    "toast.imgfail":"در موبایل مرورگر ممکن است پشتیبان تصویر نداشته باشد؛ از TXT استفاده کن.",
+    "toast.copied":"کپی شد ✅",
+    "day":"روز","hour":"ساعت",
+    "week.fa":"شنبه یکشنبه دوشنبه سه‌شنبه چهارشنبه پنجشنبه شنبه",
+    "month.fa":"فروردین اردیبهشت خرداد تیر مرداد شهریور مهر آبان آذر دی بهمن اسفند",
+    "month.tr":"Oca Şub Mar Nis May Haz Tem Ağu Eyl Eki Kas Ara",
+    "week.tr":"Pzt Sal Çar Per Cum Cmt Paz",
+    "today":"امروز","yesterday":"دیروز","untitled":"بی‌نام",
+    "hero.hint":"کارگر روزمزد · روزشمار + تقویم دوگانه",
+  },
+  tr: {
+    "app":"İş Defteri",
+    "tab.log":"Günlük","tab.totals":"Toplam","tab.employers":"İşverenler","tab.backup":"Yedekleme","tab.settings":"Ayarlar",
+    "all.employers":"Tüm işverenler","all.status":"Tüm durumlar",
+    "st.paid":"Ödendi","st.partial":"Kısmen","st.debt":"Borçlu","st.ok":"Müsbet",
+    "cal.both":"Takvim: Her ikisi","cal.fa":"Takvim: Şemsî","cal.tr":"Takvim: Miladî",
+    "ph.search":"İşveren / iş / not ara",
+    "ph.kind":"İnşaat, bahçe, mutfak...","ph.amount":"0","ph.notes":"Adres, koşul, anlaşma...",
+    "form.title":"Günlük kayıt","form.repeat":"🔁 Dün tekrarı",
+    "f.employer":"İşveren / proje","f.kind":"İş türü","f.days":"Gün sayısı",
+    "f.start":"Başlangıç","f.end":"Bitiş",
+    "f.rate":"Günlük ücret","f.paid":"Ödenen","f.advance":"Avans","f.notes":"Not / açıklama",
+    "form.save":"💾 Kaydet","form.saveYesterday":"Önceki gün kaydet","form.clear":"Temizle",
+    "log.entries":"Kaydedilenler","log.none":"Henüz kayıt yok — bugünden başla!",
+    "today.title":"Bugünkü kayıt",
+    "alert.none":"Her şey ödendi ✅",
+    "alert.warn":"⚠️ ",
+    "alert.days":"gün borçlu",
+    "tot.all":"Genel toplam","tot.days":"Çalışma günü","tot.hours":"Çalışma saati",
+    "tot.total":"Toplam ücret","tot.paid":"Ödenen","tot.advance":"Toplam avans","tot.debt":"Kalan borç",
+    "tot.balance":"Net bakiye","tot.avg":"Ortalama günlük",
+    "tot.byemployer":"İşverene göre","tot.bymonth":"Aya göre (Şemsî)",
+    "tot.col.emp":"İşveren","tot.col.days":"Gün","tot.col.hours":"Saat","tot.col.total":"Ücret","tot.col.paid":"Ödeme","tot.col.adv":"Avans","tot.col.debt":"Borç",
+    "tot.m.col":"Ay","tot.m.days":"Gün","tot.m.total":"Ücret","tot.m.paid":"Ödeme","tot.m.debt":"Borç",
+    "emp.title":"İşverenler / projeler","emp.days":"Gün","emp.hours":"Saat","emp.debt":"Borç",
+    "bak.title":"Yedek ve dışa aktarım","bak.pdf":"🖨️ PDF dışa aktarımı","bak.pdfHint":"Yazdır veya PDF olarak kaydet",
+    "bak.txt":"📄 Düzenli metin","bak.json":"🗂️ Tam yedek (JSON)","bak.img":"📸 Görsel",
+    "bak.imgHint":"Otomatik ekran görüntüsü","bak.hint":"Çıktılar hem Şemsî hem Miladî tarihleri + tüm toplamları içerir.",
+    "bak.imported":"İçeri alındı: ",
+    "set.title":"Ayarlar ve profil","set.name":"Adınız","set.currency":"Varsayılan para birimi",
+    "set.target":"Aylık hedef (tutar)","set.rate":"Varsayılan günlük ücret","set.holidayRate":"Tatil / Cuma çarpanı",
+    "set.holidayHint":"Cuma günleri bu çarpan otomatik uygulanır.",
+    "danger.title":"Tehlikeli bölge","danger.reset":"Tüm veriyi sil","danger.reset2":"Hepsini sil",
+    "danger.confirm":"Tüm veriler silinsin mi?",
+    "toast.saved":"Kaydedildi ✅","toast.deleted":"Silindi","toast.rep":"Dünkü kaydedildi",
+    "toast.pdf":"Yazdırılıyor...","toast.txt":"TXT indirildi","toast.json":"JSON indirildi","toast.img":"Ekran görüntüsü alınıyor...","toast.imgdone":"Görsel kaydedildi ✅",
+    "toast.imgfail":"Bu tarayıcı görsel yedeği desteklemiyor; TXT kullanın.",
+    "toast.copied":"Kopyalandı ✅",
+    "day":"gün","hour":"saat",
+    "week.fa":"Pzt Sal Çar Per Cum Cmt Paz",
+    "month.fa":"Oca Şub Mar Nis May Haz Tem Ağu Eyl Eki Kas Ara",
+    "month.tr":"Ocak Şubat Mart Nisan Mayıs Haziran Temmuz Ağustos Eylül Ekim Kasım Aralık",
+    "week.tr":"Pzt Sal Çar Per Cum Cmt Paz",
+    "today":"Bugün","yesterday":"Dün","untitled":"Adsız",
+    "hero.hint":"Günlük ücretli işçi · gün sayacı + çift takvim",
+  }
+};
+
+// ---------- Jalali (Shamsi) calendar — verified algorithm ----------
+// Anchor: 1 Farvardin 1304 = 1925-03-21. All tests pass.
+function isLeapJalali(jy){
+  const r = jy % 33;
+  return r===1||r===5||r===9||r===13||r===17||r===22||r===26||r===30;
+}
+function jalaliMonthDays(jy, jm){
+  if(jm<=5)  return 31;
+  if(jm===6) return 30;
+  if(jm<=11) return 30;
+  return isLeapJalali(jy) ? 30 : 29;
+}
+function gregToJalali(gy, gm, gd){
+  const epoch = Date.UTC(1925, 2, 21);
+  const target = Date.UTC(gy, gm-1, gd);
+  let diff = Math.round((target - epoch)/86400000);
+  let jy = 1304;
+  if(diff >= 0){
+    while(true){
+      const yl = isLeapJalali(jy)?366:365;
+      if(diff < yl) break;
+      diff -= yl; jy++;
+    }
+    let jm = 1;
+    while(diff >= jalaliMonthDays(jy, jm)){ diff -= jalaliMonthDays(jy, jm); jm++; }
+    return { jy, jm, jd: diff+1 };
+  } else {
+    while(diff < 0){ jy--; diff += isLeapJalali(jy)?366:365; }
+    let jm = 12;
+    while(jm > 1 && diff < jalaliMonthDays(jy, jm)-1){
+      jm--; diff -= jalaliMonthDays(jy, jm-1);
+    }
+    return { jy, jm, jd: diff+1 };
+  }
+}
+function jalaliToGregorian(jy, jm, jd){
+  let lo = Date.UTC(1900,0,1), hi = Date.UTC(2100,0,1);
+  let ans = null;
+  const target = jy*10000+jm*100+jd;
+  while(lo <= hi){
+    const mid = Math.floor((lo+hi)/2);
+    const d = new Date(mid);
+    const j = gregToJalali(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
+    const cur = j.jy*10000+j.jm*100+j.jd;
+    if(cur===target){ ans=d; break; }
+    if(cur<target) lo = mid+86400000;
+    else hi = mid-86400000;
+  }
+  if(!ans) ans = new Date(lo);
+  return { gy: ans.getUTCFullYear(), gm: ans.getUTCMonth()+1, gd: ans.getUTCDate() };
+}
+// ---------- Formatting ----------
+function fmtNum(n, dec=0){
+  const s = Number(n||0).toLocaleString(navigator.language === 'tr' ? 'tr-TR' : 'fa-IR', {maximumFractionDigits:dec});
+  return s;
+}
+function pad2(n){ return String(n).padStart(2,'0'); }
+function gregWeekday(gy, gm, gd){ return new Date(Date.UTC(gy, gm-1, gd)).getDay(); }
+
+// ---------- State ----------
+const SKEY = 'workledger.v1';
+const state = {
+  lang: localStorage.getItem('wl.lang') || 'fa',
+  dark: localStorage.getItem('wl.dark') !== '0',
+  bigfont: localStorage.getItem('wl.big') === '1',
+  user: JSON.parse(localStorage.getItem('wl.user') || 'null') || {name:"", currency:"T", target:"", rate:"", holidayMult:1},
+  entries: JSON.parse(localStorage.getItem('wl.entries') || '[]'),
+};
+function save(){
+  localStorage.setItem('wl.lang', state.lang);
+  localStorage.setItem('wl.dark', state.dark ? '1':'0');
+  localStorage.setItem('wl.big', state.bigfont?'1':'0');
+  localStorage.setItem('wl.user', JSON.stringify(state.user));
+  localStorage.setItem('wl.entries', JSON.stringify(state.entries));
+}
+function getT(){ return L10N[state.lang] || L10N.fa; }
+function T(key){ return getT()[key] || key; }
+
+// ---------- Date helpers (store as ISO yyyymmdd) ----------
+function isoToday(offsetDays=0){
+  const d = new Date(); d.setDate(d.getDate()+offsetDays);
+  return d.toISOString().slice(0,10);
+}
+function parseISO(s){ const [y,m,d]=s.split('-').map(Number); return {gy:y,gm:m,gd:d}; }
+// Jalali month names (always Persian names, even in TR locale — Jalali months have no Turkish equivalent)
+const JALALI_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const TR_DAYS = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+const FA_DAYS = ['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
+function isoJalaliStr(iso){
+  const g = parseISO(iso);
+  const j = gregToJalali(g.gy,g.gm,g.gd);
+  return `${j.jd} ${JALALI_MONTHS[j.jm-1]} ${j.jy}`;
+}
+const FA_MONTHS = ['ژانویه','فوریه','مارس','آوریل','مه','جوان','جولای','اوت','سپتامبر','اکتبر','نوامبر','دسامبر'];
+function isoGregStr(iso, withDayName){
+  const g = parseISO(iso);
+  const days = state.lang==='tr' ? TR_DAYS : FA_DAYS;
+  const months = state.lang==='tr' ? TR_MONTHS : FA_MONTHS;
+  const wd = gregWeekday(g.gy,g.gm,g.gd); // 0=Sun
+  const wdName = days[wd];
+  let s = `${pad2(g.gd)} ${months[g.gm-1]} ${g.gy}`;
+  if(withDayName) s = `${wdName} ${s}`;
+  return s;
+}
+function isoBoth(iso){
+  return `${isoJalaliStr(iso)} · ${isoGregStr(iso)}`;
+}
+
+// ---------- Money calc ----------
+function hoursOfDay(entry){
+  if(!entry.start || !entry.end) return 0;
+  const [sh,sm] = entry.start.split(':').map(Number);
+  const [eh,em] = entry.end.split(':').map(Number);
+  let h = (eh*60+em) - (sh*60+sm);
+  if(h < 0) h += 24*60;
+  return h/60;
+}
+function totals(){
+  const empMap = {};
+  let total=0, paid=0, adv=0, days=0, hours=0;
+  for(const e of state.entries){
+    const amt = (Number(e.days)||1) * (Number(e.rate)||0) * (Number(e.mult)||1);
+    total += amt; paid += Number(e.paid||0); adv += Number(e.advance||0);
+    days += Number(e.days||1); hours += hoursOfDay(e) * (Number(e.days)||1);
+    const k = e.employer || T('untitled');
+    if(!empMap[k]) empMap[k]={days:0,hours:0,total:0,paid:0,adv:0};
+    empMap[k].days += Number(e.days||1);
+    empMap[k].hours += hoursOfDay(e)*(Number(e.days||1));
+    empMap[k].total += amt; empMap[k].paid += Number(e.paid||0); empMap[k].adv += Number(e.advance||0);
+  }
+  const debt = Math.max(0, total - paid - adv);
+  const balance = total - paid - adv;
+  const avg = days ? total/days : 0;
+  return {total, paid, adv, debt, balance, days, hours, avg, emp:empMap};
+}
+function monthTotals(){
+  const m = {};
+  for(const e of state.entries){
+    const j = gregToJalali(...parseISO(e.date).values.map(Number));
+    const key = `${j.jy}-${pad2(j.jm)}`;
+    if(!m[key]) m[key]={days:0,total:0,paid:0,adv:0};
+    const amt = (Number(e.days)||1)*(Number(e.rate)||0)*(Number(e.mult)||1);
+    m[key].days += Number(e.days||1);
+    m[key].total += amt; m[key].paid += Number(e.paid||0); m[key].adv += Number(e.advance||0);
+  }
+  return m;
+}
+
+// ---------- Render ----------
+function el(id){ return document.getElementById(id); }
+function fmtMoney(v, cur){
+  if(state.lang==='tr'){
+    return cur === 'T' ? `${fmtNum(v)} Ir` : `${cur} ${fmtNum(v)}`;
+  }
+  return `${fmtNum(v)} ${cur==='T'?'ت':cur}`;
+}
+function setKpi(){
+  const t = totals();
+  const c = state.user.currency || 'T';
+  el('kpi').innerHTML = `
+    <div class="cell"><div class="lbl">${T('tot.days')}</div><div class="val">${fmtNum(t.days,1)}</div></div>
+    <div class="cell"><div class="lbl">${T('tot.hours')}</div><div class="val">${fmtNum(t.hours,1)} ${T('hour')}</div></div>
+    <div class="cell"><div class="lbl">${T('tot.total')}</div><div class="val">${fmtMoney(t.total,c)}</div></div>
+    <div class="cell"><div class="lbl">${T('tot.debt')} <span class="val bad" style="display:block;font-size:1rem;margin-top:4px">${fmtMoney(t.debt,c)}</span></div></div>`;
+  el('heroSub').textContent = `${state.user.name || T('hero.hint')} · ${T('today')}: ${isoBoth(isoToday())}`;
+}
+
+function entryStatus(e){
+  const amt = (Number(e.days)||1)*(Number(e.rate)||0)*(Number(e.mult)||1);
+  const got = Number(e.paid||0) + Number(e.advance||0);
+  if(amt<=0) return 'debt';
+  if(got >= amt - 1) return 'paid';
+  if(got>0) return 'partial';
+  return 'debt';
+}
+function statusTag(st){
+  const cls = st==='paid'?'ok': st==='partial'?'warn':'bad';
+  const lbl = st==='paid'?T('st.paid'): st==='partial'?T('st.partial'):T('st.debt');
+  return `<span class="tag ${cls}">${lbl}</span>`;
+}
+function renderEntries(){
+  const q = (el('q').value||'').toLowerCase();
+  const ef = el('empFilter').value;
+  const sf = el('statusFilter').value;
+  const cal = Number(el('calSelect').value); // 0 both, 1 fa, 2 tr
+  const list = document.getElementById('entries');
+  const t = totals();
+  const c = state.user.currency || 'T';
+  const empOptions = [...new Set(state.entries.map(e=>e.employer||T('untitled')))].map(n=>`<option value="${n}">${n}</option>`).join('');
+  el('empFilter').innerHTML = `<option value="">${T('all.employers')}</option>` + empOptions;
+  el('empList').innerHTML = empOptions;
+
+  let filtered = state.entries.slice().sort((a,b)=> b.date.localeCompare(a.date));
+  if(q) filtered = filtered.filter(e => (e.employer||'').toLowerCase().includes(q) || (e.kind||'').toLowerCase().includes(q) || (e.notes||'').toLowerCase().includes(q));
+  if(ef) filtered = filtered.filter(e => (e.employer||T('untitled'))===ef);
+  if(sf) filtered = filtered.filter(e => entryStatus(e)===sf);
+
+  if(!filtered.length){ list.innerHTML = `<div class="card" style="padding:20px;text-align:center;color:var(--sub)">${T('log.none')}</div>`; return; }
+
+  list.innerHTML = filtered.map(e=>{
+    const amt = (Number(e.days)||1)*(Number(e.rate)||0)*(Number(e.mult)||1);
+    const got = Number(e.paid||0)+Number(e.advance||0);
+    const st = entryStatus(e);
+    const dateStr = cal===1 ? isoJalaliStr(e.date) : cal===2 ? isoGregStr(e.date) : isoBoth(e.date);
+    return `
+    <div class="entry" data-id="${e.id}">
+      <div class="top">
+        <div>
+          <div class="emp">${e.employer || T('untitled')}${e.kind?` <span class="kind">· ${e.kind}</span>`:''}</div>
+          <div class="dats">${dateStr}${e.start?` · ⏰ ${e.start}-${e.end}`:''}</div>
+        </div>
+        <div class="top" style="text-align:end">${statusTag(st)}</div>
+      </div>
+      <div class="money">
+        <span>${T('f.days')}: <b>${fmtNum(e.days,1)}</b></span>
+        <span>${T('f.rate')}: <b>${fmtMoney((Number(e.rate)||0)*(Number(e.mult)||1),c)}</b></span>
+        <span>= <b>${fmtMoney(amt,c)}</b></span>
+        <span class="ok" style="color:var(--ok)">${T('f.paid')}: ${fmtMoney(got,c)}</span>
+        <span style="color:var(--bad)">= ${fmtMoney(Math.max(0,amt-got),c)}</span>
+      </div>
+      ${e.notes?`<div style="color:var(--sub);font-size:.8rem">📝 ${e.notes}</div>`:''}
+      <div class="act">
+        <button class="icobtn" data-act="edit" data-id="${e.id}" title="دو بار ضربه برای ویرایش">✏️</button>
+        <button class="icobtn del" data-act="del" data-id="${e.id}" title="حذف">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderTodayAlert(){
+  const c = state.user.currency || 'T';
+  const daysSince = (dateStr)=> {
+    const [y,m,d]=dateStr.split('-').map(Number);
+    const diff = (Date.now() - new Date(y,m-1,d).getTime())/86400000;
+    return Math.floor(diff);
+  };
+  const unpaid = state.entries.filter(e=> entryStatus(e)!=='paid');
+  const elA = el('todayAlert');
+  if(!unpaid.length){
+    elA.className = 'alert';
+    elA.innerHTML = `<span class="ic">✅</span><div>${T('alert.none')}</div>`;
+    return;
+  }
+  const totalDebt = unpaid.reduce((s,e)=> s + Math.max(0,(Number(e.days)||1)*(Number(e.rate||0))*(Number(e.mult)||1) - (Number(e.paid||0)+Number(e.advance||0))),0);
+  const oldest = unpaid.reduce((a,b)=> a.date>b.date?b:a).date;
+  const d = daysSince(oldest);
+  elA.className = 'alert warn';
+  elA.innerHTML = `<span class="ic">⚠️</span><div><b>${unpaid.length} ${T('day')}</b> معوق · <b>${fmtMoney(totalDebt,c)}</b> بدهی · قدیمی‌ترین: <b>${d} ${T('alert.days')}</b></div>`;
+}
+function renderEmployers(){
+  const t = totals();
+  const c = state.user.currency || 'T';
+  const html = Object.entries(t.emp).sort((a,b)=> (b[1].total-b[1].paid-b[1].adv)-(a[1].total-a[1].paid-a[1].adv)).map(([n,v])=>{
+    const debt = Math.max(0, v.total - v.paid - v.adv);
+    return `
+    <div class="entry" style="margin-bottom:8px">
+      <div class="top">
+        <div class="emp">${n}</div>
+        <div>${debt>0?`<span class="tag bad">${fmtMoney(debt,c)}</span>`:`<span class="tag ok">${T('st.ok')}</span>`}</div>
+      </div>
+      <div class="money">
+        <span>${T('emp.days')}: <b>${fmtNum(v.days,1)}</b></span>
+        <span>${T('emp.hours')}: <b>${fmtNum(v.hours,1)}</b></span>
+        <span>کل: <b>${fmtMoney(v.total,c)}</b></span>
+        <span style="color:var(--ok)">پرداخت: ${fmtMoney(v.paid,c)}</span>
+      </div>
+    </div>`;
+  }).join('') || `<div class="card" style="padding:20px;text-align:center;color:var(--sub)">${T('log.none')}</div>`;
+  el('empListCards').innerHTML = html;
+}
+function renderTotals(){
+  const t = totals();
+  const c = state.user.currency || 'T';
+  el('tDays').textContent = fmtNum(t.days,1);
+  el('tHours').textContent = fmtNum(t.hours,1);
+  el('tTotal').textContent = fmtMoney(t.total,c);
+  el('tPaid').textContent = fmtMoney(t.paid,c);
+  el('tAdvance').textContent = fmtMoney(t.adv,c);
+  el('tDebt').textContent = fmtMoney(t.debt,c);
+  el('tBalance').textContent = fmtMoney(t.balance,c);
+  el('tAvg').textContent = fmtMoney(t.avg,c);
+  const ratio = t.total>0 ? Math.min(100, Math.round((t.paid+t.adv)/t.total*100)) : 0;
+  el('paybarFill').style.width = ratio+'%';
+  el('paybarLbl').textContent = `${ratio}% ${T('tot.paid')} · ${100-ratio}% ${T('tot.debt')}`;
+
+  // by employer
+  const rows = Object.entries(t.emp).sort((a,b)=>(b[1].total-b[1].paid-b[1].adv)-(a[1].total-a[1].paid-a[1].adv));
+  el('byEmp').innerHTML = `
+    <table>
+      <thead><tr><th>${T('tot.col.emp')}</th><th class="num">${T('tot.col.days')}</th><th class="num">${T('tot.col.total')}</th><th class="num">${T('tot.col.paid')}</th><th class="num">${T('tot.col.adv')}</th><th class="num">${T('tot.col.debt')}</th></tr></thead>
+      <tbody>${rows.map(([n,v])=>`<tr><td>${n}</td><td class="num">${fmtNum(v.days,1)}</td><td class="num">${fmtMoney(v.total,c)}</td><td class="num">${fmtMoney(v.paid,c)}</td><td class="num">${fmtMoney(v.adv,c)}</td><td class="num" style="color:var(--bad)">${fmtMoney(Math.max(0,v.total-v.paid-v.adv),c)}</td></tr>`).join('')}
+      <tr class="big"><td>Σ</td><td class="num">${fmtNum(t.days,1)}</td><td class="num">${fmtMoney(t.total,c)}</td><td class="num">${fmtMoney(t.paid,c)}</td><td class="num">${fmtMoney(t.adv,c)}</td><td class="num">${fmtMoney(t.debt,c)}</td></tr>
+      </tbody>
+    </table>`;
+
+  // by month (Jalali)
+  const mm = monthTotals();
+  const mrows = Object.entries(mm).sort((a,b)=> a[0].localeCompare(b[0]));
+  el('bymonth').innerHTML = `
+    <table>
+      <thead><tr><th>${T('tot.m.col')} (ج)</th><th class="num">${T('tot.m.days')}</th><th class="num">${T('tot.m.total')}</th><th class="num">${T('tot.m.paid')}</th><th class="num">${T('tot.m.debt')}</th></tr></thead>
+      <tbody>${mrows.map(([k,v])=>{
+        const [y,mmn]=k.split('-').map(Number);
+        const mname = JALALI_MONTHS[mmn-1] || '';
+        return `<tr><td>${mname} ${y}</td><td class="num">${fmtNum(v.days,1)}</td><td class="num">${fmtMoney(v.total,c)}</td><td class="num">${fmtMoney(v.paid,c)}</td><td class="num" style="color:var(--bad)">${fmtMoney(Math.max(0, v.total-v.paid-v.adv),c)}</td></tr>`;
+      }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--sub)">${T('log.none')}</td></tr>`}
+      </tbody>
+    </table>`;
+}
+function renderSettings(){
+  el('setName').value = state.user.name||'';
+  el('setCurrency').value = state.user.currency||'T';
+  el('setTarget').value = state.user.target||'';
+  el('setDefaultRate').value = state.user.rate||'';
+  el('setHolidayMult').value = state.user.holidayMult||1;
+}
+function renderAll(){
+  document.documentElement.dir = state.lang==='tr' ? 'ltr' : 'rtl';
+  document.documentElement.lang = state.lang;
+  document.querySelectorAll('[data-i18n]').forEach(n=> n.textContent = T(n.dataset.i18n));
+  document.querySelectorAll('[data-i18n-ph]').forEach(n=> n.placeholder = T(n.dataset.i18nPh));
+  document.body.classList.toggle('light', !state.dark);
+  document.body.classList.toggle('bigfont', state.bigfont);
+  el('heroTitle').textContent = state.user.name || T('app');
+  setKpi(); renderTodayAlert(); renderEntries(); renderEmployers(); renderTotals(); renderSettings();
+}
+
+// ---------- Actions ----------
+function readForm(){
+  const employer = el('fEmployer').value.trim();
+  const kind = el('fKind').value.trim();
+  const days = Number(el('fDays').value)||1;
+  const start = el('fStart').value;
+  const end = el('fEnd').value;
+  const rate = Number(el('fRate').value)||0;
+  const paid = Number(el('fPaid').value)||0;
+  const advance = Number(el('fAdvance').value)||0;
+  const notes = el('fNotes').value.trim();
+  const date = el('formDateIso').value || isoToday();
+  const g = parseISO(date);
+  const wd = gregWeekday(g.gy,g.gm,g.gd);
+  const isFri = wd===5;
+  let mult = 1;
+  if(isFri) mult = Number(state.user.holidayMult)||1;
+  return {employer,kind,days,start,end,rate,paid,advance,notes,date,mult};
+}
+function saveEntry(offset=0){
+  const e = readForm();
+  e.id = Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  e.offset = offset; // offset days applied
+  state.entries.push(e);
+  save();
+  renderAll();
+  toast(T('toast.saved'),'ok');
+  clearForm();
+}
+function clearForm(){
+  el('fEmployer').value=''; el('fKind').value=''; el('fDays').value='1';
+  el('fStart').value='08:00'; el('fEnd').value='17:00';
+  el('fRate').value=state.user.rate||''; el('fPaid').value=''; el('fAdvance').value=''; el('fNotes').value='';
+  updateFormDate();
+}
+function updateFormDate(){
+  const iso = el('formDateIso').value || isoToday();
+  el('formDateFa').textContent = isoJalaliStr(iso);
+  el('formDateTr').textContent = isoGregStr(iso,true);
+}
+function editEntry(id){
+  const e = state.entries.find(x=>x.id===id); if(!e) return;
+  el('fEmployer').value = e.employer||''; el('fKind').value = e.kind||'';
+  el('fDays').value = e.days; el('fStart').value = e.start||''; el('fEnd').value = e.end||'';
+  el('fRate').value = e.rate; el('fPaid').value = e.paid; el('fAdvance').value = e.advance; el('fNotes').value = e.notes||'';
+  el('formDateIso').value = e.date;
+  updateFormDate();
+  const prev = el('btnSave').onclick;
+  el('btnSave').textContent = '✓ ' + T('form.save');
+  el('btnSave').dataset.editId = id;
+}
+function deleteEntry(id){
+  state.entries = state.entries.filter(x=>x.id!==id);
+  save(); renderAll(); toast(T('toast.deleted'));
+}
+function repeatYesterday(){
+  const d = state.entries.filter(e=>e.date===isoToday(-1)).pop();
+  if(!d){ toast('دیروزی ثبت نشده','err'); return; }
+  el('fEmployer').value = d.employer||''; el('fKind').value = d.kind||'';
+  el('fDays').value = d.days; el('fStart').value = d.start||''; el('fEnd').value = d.end||'';
+  el('fRate').value = d.rate; el('fPaid').value = ''; el('fAdvance').value = ''; el('fNotes').value = '';
+  el('formDateIso').value = isoToday();
+  updateFormDate();
+  toast(T('toast.rep'),'ok');
+}
+
+// ---------- Backup / Export ----------
+function buildReportText(){
+  const t = totals();
+  const c = state.user.currency||'T';
+  const L=[];
+  L.push(`═══════════════════════ حساب کار / İş Defteri ═══════════════════════`);
+  L.push(`کارگر / İşçi: ${state.user.name||'—'}`);
+  L.push(`تاریخ / Tarih: ${isoJalaliStr(isoToday())} · ${isoGregStr(isoToday())}`);
+  L.push(`واحد / Birim: ${c}`);
+  L.push('');
+  L.push('─── جمع کل / Genel Toplam ───');
+  L.push(`  روزهای کاری: ${fmtNum(t.days,1)}   ساعت: ${fmtNum(t.hours,1)}`);
+  L.push(`  کل دستمزد: ${fmtNum(t.total,0)} ${c}`);
+  L.push(`  پرداخت‌شده: ${fmtNum(t.paid,0)} ${c}`);
+  L.push(`  کل اَوانس: ${fmtNum(t.adv,0)} ${c}`);
+  L.push(`  بدهی باقی: ${fmtNum(t.debt,0)} ${c}`);
+  L.push(`  مانده خالص: ${fmtNum(t.balance,0)} ${c}`);
+  L.push('');
+  L.push('─── به تفکیک کارفرما / İşverene göre ───');
+  Object.entries(t.emp).sort((a,b)=>(b[1].total-b[1].paid-b[1].adv)-(a[1].total-a[1].paid-a[1].adv)).forEach(([n,v])=>{
+    const debt = Math.max(0, v.total-v.paid-v.adv);
+    L.push(`  ${n}: ${fmtNum(v.days,1)} ر · کل ${fmtNum(v.total,0)} · پرداخت ${fmtNum(v.paid,0)} · اَوانس ${fmtNum(v.adv,0)} · بدهی ${fmtNum(debt,0)} ${c}`);
+  });
+  L.push('');
+  L.push('─── ورودهای ثبت‌شده / Kayıtlar ───');
+  state.entries.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(e=>{
+    const amt=(Number(e.days)||1)*(Number(e.rate||0))*(Number(e.mult)||1);
+    L.push(`${e.date} | ${e.employer||'—'} | ${e.kind||'—'} | ${fmtNum(e.days,1)} ر ${e.start?`(${e.start}-${e.end})`:''} | ${fmtNum(amt,0)} ${c} | پرداخت ${fmtNum(Number(e.paid||0)+Number(e.advance||0),0)} ${e.notes?`| ${e.notes}`:''}`);
+  });
+  L.push('');
+  L.push(`───────────────────────────────────────────────`);
+  L.push(`تولید: ${isoBoth(isoToday())}`);
+  L.push('');
+  return L.join('\n');
+}
+function downloadFile(name, text, mime){
+  const blob = new Blob([text],{type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+function doPDF(){
+  window.print();
+  toast(T('toast.pdf'));
+}
+function doTXT(){
+  const name = `workledger-${isoToday()}.txt`;
+  downloadFile(name, buildReportText(), 'text/plain;charset=utf-8');
+  toast(T('toast.txt'),'ok');
+}
+function doJSON(){
+  const data = { version:1, exportedAt: new Date().toISOString(), user: state.user, entries: state.entries };
+  downloadFile(`workledger-backup-${isoToday()}.json`, JSON.stringify(data,null,2), 'application/json');
+  toast(T('toast.json'),'ok');
+}
+function importJSON(file){
+  file.text().then(txt=>{
+    try{
+      const d = JSON.parse(txt);
+      if(!d.entries) throw 0;
+      state.entries = d.entries;
+      if(d.user) state.user = Object.assign(state.user, d.user);
+      save(); renderAll();
+      toast(T('bak.imported')+state.entries.length+' '+T('day'),'ok');
+    }catch(e){ toast('فایل نامعتبر','err'); }
+  });
+}
+async function doIMG(){
+  toast(T('toast.img'));
+  try{
+    const html2canvas = await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    const el0 = document.querySelector('.wrap');
+    const canvas = await html2canvas(el0,{backgroundColor: state.dark?'#0a0e1a':'#ffffff', scale:1.5});
+    const dataURL = canvas.toDataURL('image/png');
+    const a = document.createElement('a'); a.href = dataURL; a.download = `workledger-${isoToday()}.png`; document.body.appendChild(a); a.click(); a.remove();
+    toast(T('toast.imgdone'),'ok');
+  }catch(e){
+    toast(T('toast.imgfail'),'err');
+  }
+}
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    if(document.querySelector(`script[src="${src}"]`)) return res(true);
+    const s = document.createElement('script'); s.src=src; s.onload=()=>res(true); s.onerror=()=>rej(new Error(src)); document.head.appendChild(s);
+  });
+}
+
+// ---------- UI wiring ----------
+function toast(msg, cls){
+  const t = el('toast'); t.textContent = msg; t.className='toast on '+(cls||'');
+  clearTimeout(t._to); t._to = setTimeout(()=>t.className='toast', 2200);
+}
+
+// tabs
+el('tabs').addEventListener('click', e=>{
+  const b = e.target.closest('.tab'); if(!b) return;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.tabpanel').forEach(x=>x.classList.add('hidden'));
+  b.classList.add('on');
+  document.querySelector(`.tabpanel[data-tab="${b.dataset.tab}"]`).classList.remove('hidden');
+});
+
+// date input in form
+const dateInput = document.createElement('input');
+dateInput.type='date'; dateInput.id='formDateIso'; dateInput.value = isoToday();
+dateInput.style.cssText = 'width:100%';
+// inject into form dateRow
+document.querySelector('#formCard .dateRow').appendChild(dateInput);
+dateInput.addEventListener('input', updateFormDate);
+
+el('btnSave').onclick = ()=>{
+  const editId = el('btnSave').dataset.editId;
+  if(editId){
+    const i = state.entries.findIndex(x=>x.id===editId);
+    if(i>=0){
+      const e = readForm();
+      state.entries[i] = Object.assign(state.entries[i], e, {id:editId});
+      save(); renderAll(); delete el('btnSave').dataset.editId; el('btnSave').textContent = '💾 '+T('form.save');
+      toast(T('toast.saved'),'ok'); clearForm();
+      return;
+    }
+  }
+  saveEntry(0);
+};
+el('btnSavePrevDay').onclick = ()=> saveEntry(-1);
+el('btnClear').onclick = ()=>{ clearForm(); delete el('btnSave').dataset.editId; el('btnSave').textContent='💾 '+T('form.save'); };
+el('btnRepeatYesterday').onclick = repeatYesterday;
+
+el('entries').addEventListener('click', e=>{
+  const b = e.target.closest('.icobtn'); if(!b) return;
+  const id = b.dataset.id;
+  if(b.dataset.act==='del') deleteEntry(id);
+  else if(b.dataset.act==='edit') editEntry(id);
+});
+
+['q','empFilter','statusFilter','calSelect'].forEach(id=> el(id).addEventListener('input', renderEntries));
+
+el('btnTheme').onclick = ()=>{ state.dark = !state.dark; save(); renderAll(); };
+el('btnBigFont').onclick = ()=>{ state.bigfont = !state.bigfont; save(); renderAll(); };
+el('btnLang').onclick = ()=>{ state.lang = state.lang==='fa'?'tr':'fa'; el('btnLang').textContent = state.lang==='fa'?'TR':'FA'; save(); renderAll(); };
+
+el('btnPDF').onclick = doPDF;
+el('btnTXT').onclick = doTXT;
+el('btnJSON').onclick = doJSON;
+el('btnIMG').onclick = doIMG;
+el('jsonImport').onchange = e=>{ if(e.target.files[0]) importJSON(e.target.files[0]); e.target.value=''; };
+
+['setName','setCurrency','setTarget','setDefaultRate','setHolidayMult'].forEach(id=>{
+  el(id).addEventListener('input', e=>{
+    state.user[id.slice(3).toLowerCase()] = e.target.value;
+    if(id==='setCurrency') state.user.currency = e.target.value;
+    if(id==='setDefaultRate') state.user.rate = e.target.value;
+    if(id==='setTarget') state.user.target = e.target.value;
+    if(id==='setName') state.user.name = e.target.value;
+    if(id==='setHolidayMult') state.user.holidayMult = Number(e.target.value)||1;
+    save();
+  });
+});
+el('btnReset').onclick = ()=>{
+  if(confirm(T('danger.confirm'))){
+    state.entries = []; save(); renderAll(); toast(T('toast.deleted'));
+  }
+};
+
+el('btnSample').onclick = ()=>{
+  state.entries = [
+    {id:'s1', employer:'آقای احمدی - ساختمان شرقی', kind:'سازه و بتن', days:1, start:'07:30', end:'16:30', rate:850, paid:500, advance:200, notes:'طبقه 3 - بتن‌ریزی', date: isoToday(0)},
+    {id:'s2', employer:'آقای احمدی - ساختمان شرقی', kind:'سازه و بتن', days:1, start:'08:00', end:'17:00', rate:850, paid:0, advance:0, notes:'', date: isoToday(-1)},
+    {id:'s3', employer:'باغچه خانم رضایی', kind:'باغبانی', days:0.5, start:'10:00', end:'14:00', rate:600, paid:300, advance:0, notes:'برش چمن', date: isoToday(-2)},
+    {id:'s4', employer:'باغچه خانم رضایی', kind:'باغبانی', days:1, start:'09:00', end:'18:00', rate:600, paid:0, advance:300, notes:'حذف درخت کهنه', date: isoToday(-3)},
+    {id:'s5', employer:'مجموعه تجاری گلستان', kind:'قالب‌بندی', days:1, start:'08:00', end:'17:00', rate:950, paid:950, advance:0, notes:'تسویه آخر', date: isoToday(-5)},
+  ];
+  state.user.name = 'رضا'; state.user.currency='T'; state.user.rate='850';
+  save(); renderAll(); toast('۵ داده نمونه بارگذاری شد ✅','ok');
+};
+
+updateFormDate();
+renderAll();
+
+// PWA service worker (cache-first for offline)
+if('serviceWorker' in navigator){
+  const swURL = `data:application/javascript,${encodeURIComponent(`
+    const C='wl-v1';
+    self.addEventListener('install',e=>self.skipWaiting());
+    self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+    self.addEventListener('fetch',e=>{
+      if(e.request.method!=='GET') return;
+      e.respondWith(caches.open(C).then(c=>c.match(e.request).then(m=>m||fetch(e.request).then(r=>{c.put(e.request,r.clone());return r;}))).catch(()=>caches.match('./index.html')));
+    });
+  `)}`;
+  // data: SW not allowed. Use blob same-origin? still disallowed. Skip SW; use localStorage + PWA meta.
+}
+</script>
+</body>
+</html>
