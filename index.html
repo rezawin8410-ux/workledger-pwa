@@ -595,6 +595,32 @@ function save(){
   localStorage.setItem('wl.big', state.bigfont?'1':'0');
   localStorage.setItem('wl.user', JSON.stringify(state.user));
   localStorage.setItem('wl.entries', JSON.stringify(state.entries));
+  wlPushBackup();
+}
+// ---- Persistence bridge (native APK) ----
+// Every save() also pushes the full state to the native file (filesDir/workledger_backup.json),
+// so data survives even if the WebView's LevelDB is wiped on process kill.
+function __wlExport(){
+  try{
+    return JSON.stringify({v:2, user:state.user, entries:state.entries, lang:state.lang, dark:state.dark, bigfont:state.bigfont});
+  }catch(e){ return ''; }
+}
+function __wlRestore(json){
+  try{
+    const d = JSON.parse(json);
+    if(!d || typeof d !== 'object') return;
+    if(d.user) state.user = Object.assign(state.user, d.user);
+    if(Array.isArray(d.entries)) state.entries = d.entries;
+    if(typeof d.lang==='string') state.lang = d.lang;
+    if(typeof d.dark==='boolean') state.dark = d.dark;
+    if(typeof d.bigfont==='boolean') state.bigfont = d.bigfont;
+    save(); renderAll();
+  }catch(e){}
+}
+function wlPushBackup(){
+  try{
+    if(window.AndroidHost && AndroidHost.backup){ AndroidHost.backup(__wlExport()); }
+  }catch(e){}
 }
 function getT(){ return L10N[state.lang] || L10N.fa; }
 function T(key){ return getT()[key] || key; }
@@ -965,16 +991,23 @@ function doTXT(){
   toast(T('toast.txt'),'ok');
 }
 function doJSON(){
-  const data = { version:1, exportedAt: new Date().toISOString(), user: state.user, entries: state.entries };
-  downloadFile(`workledger-backup-${isoToday()}.json`, JSON.stringify(data,null,2), 'application/json');
+  const data = { version:2, exportedAt: new Date().toISOString(), user: state.user, entries: state.entries };
+  const json = JSON.stringify(data, null, 2);
+  // Native path: save straight to the device's Downloads via MediaStore (works offline)
+  if(window.AndroidHost && AndroidHost.saveToDownloads){
+    const b64 = btoa(unescape(encodeURIComponent(json)));
+    const r = AndroidHost.saveToDownloads(`workledger-backup-${isoToday()}.json`, b64, 'application/json');
+    if(r === 'OK'){ toast(T('toast.json'),'ok'); return; }
+  }
+  downloadFile(`workledger-backup-${isoToday()}.json`, json, 'application/json');
   toast(T('toast.json'),'ok');
 }
 function importJSON(file){
   file.text().then(txt=>{
     try{
       const d = JSON.parse(txt);
-      if(!d.entries) throw 0;
-      state.entries = d.entries;
+      if(!d.entries && !d.user) throw 0;
+      if(Array.isArray(d.entries)) state.entries = d.entries;
       if(d.user) state.user = Object.assign(state.user, d.user);
       save(); renderAll();
       toast(T('bak.imported')+state.entries.length+' '+T('day'),'ok');
@@ -983,10 +1016,22 @@ function importJSON(file){
 }
 async function doIMG(){
   toast(T('toast.img'));
+  // Native capture (works offline, full scrollable page)
+  if(window.AndroidHost && AndroidHost.capture){
+    const cssH = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight);
+    let r;
+    try{ r = AndroidHost.capture(cssH); }catch(e){ r = ''; }
+    if(r && r.length > 100 && r.slice(0,3) !== 'ERR'){
+      const dataURL = 'data:image/png;base64,'+r;
+      const a = document.createElement('a'); a.href = dataURL; a.download = `workledger-${isoToday()}.png`; document.body.appendChild(a); a.click(); a.remove();
+      toast(T('toast.imgdone'),'ok');
+      return;
+    }
+  }
+  // Fallback: html2canvas (online only)
   try{
     const html2canvas = await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-    const el0 = document.querySelector('.wrap');
-    const canvas = await html2canvas(el0,{backgroundColor: state.dark?'#0a0e1a':'#ffffff', scale:1.5});
+    const canvas = await html2canvas(document.querySelector('.wrap'),{backgroundColor: state.dark?'#0a0e1a':'#ffffff', scale:1.5});
     const dataURL = canvas.toDataURL('image/png');
     const a = document.createElement('a'); a.href = dataURL; a.download = `workledger-${isoToday()}.png`; document.body.appendChild(a); a.click(); a.remove();
     toast(T('toast.imgdone'),'ok');
@@ -1090,6 +1135,11 @@ el('btnSample').onclick = ()=>{
   save(); renderAll(); toast('۵ داده نمونه بارگذاری شد ✅','ok');
 };
 
+// Native restore on startup (APK): pull persisted data from the app file
+try{ if(window.AndroidHost && AndroidHost.getBackup){
+  const b = AndroidHost.getBackup();
+  if(b && b.length>2){ __wlRestore(b); }
+} }catch(e){}
 updateFormDate();
 renderAll();
 
